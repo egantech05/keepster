@@ -17,6 +17,7 @@ export type SessionState = {
   endedAt: number | null;
   lastAction: LastAction | null;
   pendingDeleteIds: string[];
+  scanningAlbums: boolean;
   loading: boolean;
   error: string | null;
   hasNextPage: boolean;

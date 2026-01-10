@@ -115,7 +115,9 @@ export function SessionScreen() {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={colors.accent} />
-        <Text style={styles.loadingText}>Loading photos...</Text>
+        <Text style={styles.loadingText}>
+          {state.scanningAlbums ? 'Scanning albums...' : 'Loading photos...'}
+        </Text>
       </View>
     );
   }

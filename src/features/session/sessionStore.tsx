@@ -22,6 +22,7 @@ const initialState: SessionState = {
   endedAt: null,
   lastAction: null,
   pendingDeleteIds: [],
+  scanningAlbums: false,
   loading: false,
   error: null,
   hasNextPage: true,
@@ -124,7 +125,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const loadInitialAssets = useCallback(async () => {
     if (stateRef.current.loading) return;
-    setState((prev) => ({ ...prev, loading: true, error: null }));
+    setState((prev) => ({ ...prev, loading: true, scanningAlbums: true, error: null }));
     try {
       const queueState = await loadInitialQueue(INITIAL_QUEUE_TARGET);
       setState((prev) => ({
@@ -132,6 +133,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         queue: queueState.assets,
         endCursor: queueState.endCursor,
         hasNextPage: queueState.hasNextPage,
+        scanningAlbums: false,
         loading: false,
       }));
     } catch (error) {
@@ -139,6 +141,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       setState((prev) => ({
         ...prev,
         error: 'Unable to load photos. Please try again.',
+        scanningAlbums: false,
         loading: false,
       }));
     }
