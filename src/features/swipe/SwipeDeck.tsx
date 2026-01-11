@@ -30,7 +30,13 @@ export function SwipeDeck({ asset, nextAsset, onSwipeLeft, onSwipeRight, disable
           <AssetImage asset={nextAsset} style={styles.nextImage} resizeMode="cover" />
         </View>
       )}
-      <SwipeCard asset={asset} onSwipeLeft={onSwipeLeft} onSwipeRight={onSwipeRight} disabled={disabled} />
+      <SwipeCard
+        key={asset.id}
+        asset={asset}
+        onSwipeLeft={onSwipeLeft}
+        onSwipeRight={onSwipeRight}
+        disabled={disabled}
+      />
     </View>
   );
 }

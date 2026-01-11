@@ -26,6 +26,7 @@ export function SessionScreen() {
     loadMoreAssets,
     markKept,
     markDeleted,
+    skipAsset,
     undoDelete,
     finishSession,
   } = useSessionStore();
@@ -75,11 +76,10 @@ export function SessionScreen() {
 
   const handleSwipeRight = useCallback(() => {
     if (!currentAsset) return;
-    markKept(currentAsset);
     setPendingKeepAsset(currentAsset);
     setModalVisible(true);
     triggerHaptics();
-  }, [currentAsset, markKept, triggerHaptics]);
+  }, [currentAsset, triggerHaptics]);
 
   const handleConfirmAlbum = useCallback(
     async (album: Album | null) => {
@@ -90,12 +90,13 @@ export function SessionScreen() {
       try {
         await addAssetToAlbum(asset, album);
         await recordAlbumUsage(album.id);
+        markKept(asset);
       } catch (error) {
         logger.warn('Album add failed', error);
         showToast('Could not save to album');
       }
     },
-    [pendingKeepAsset, showToast]
+    [markKept, pendingKeepAsset, showToast]
   );
 
   const handleCancelAlbum = useCallback(() => {
@@ -104,6 +105,12 @@ export function SessionScreen() {
   }, []);
 
   const isUndoVisible = useMemo(() => !!state.lastAction, [state.lastAction]);
+
+  const handleSkip = useCallback(() => {
+    if (!currentAsset || modalVisible) return;
+    skipAsset(currentAsset);
+    triggerHaptics();
+  }, [currentAsset, modalVisible, skipAsset, triggerHaptics]);
 
   const handleDone = useCallback(() => {
     finishSession();
@@ -132,6 +139,7 @@ export function SessionScreen() {
   return (
     <View style={styles.container}>
       <ProgressPill label={`${processedCount} cleaned`} />
+      <Button label="Done" onPress={handleDone} variant="ghost" style={styles.doneButton} />
       <View style={styles.deckWrapper}>
         <SwipeDeck
           asset={currentAsset}
@@ -141,8 +149,15 @@ export function SessionScreen() {
           disabled={modalVisible}
         />
       </View>
-      <View style={styles.actionRow}>
-        <IconButton icon="checkmark" onPress={handleDone} accessibilityLabel="Done" variant="primary" />
+      <View style={styles.bottomControls} pointerEvents="box-none">
+        <IconButton
+          icon="close"
+          onPress={handleSkip}
+          accessibilityLabel="Skip"
+          variant="ghost"
+          style={styles.skipButton}
+          disabled={modalVisible}
+        />
         {isUndoVisible && (
           <IconButton
             icon="arrow-undo"
@@ -169,21 +184,32 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     backgroundColor: colors.background,
   },
+  doneButton: {
+    position: 'absolute',
+    top: spacing.lg,
+    right: spacing.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
   deckWrapper: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: spacing.lg,
   },
-  actionRow: {
+  bottomControls: {
     position: 'absolute',
     bottom: spacing.xl,
+    left: spacing.lg,
     right: spacing.lg,
-    flexDirection: 'row',
     alignItems: 'center',
   },
+  skipButton: {
+    alignSelf: 'center',
+  },
   undoButton: {
-    marginLeft: spacing.sm,
+    position: 'absolute',
+    left: 0,
   },
   centered: {
     flex: 1,

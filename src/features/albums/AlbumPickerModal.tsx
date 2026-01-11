@@ -1,5 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import type { Album } from 'expo-media-library';
 import * as MediaLibrary from 'expo-media-library';
 import { Button } from '../../components/Button';
@@ -112,70 +119,77 @@ export function AlbumPickerModal({ visible, onConfirm, onCancel }: AlbumPickerMo
 
   return (
     <ModalSheet visible={visible} onRequestClose={onCancel}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Choose album</Text>
-        {loading && <ActivityIndicator size="small" color={colors.accent} />}
-      </View>
-      <View style={styles.pickerContainer}>
-        <Text style={styles.selectedLabel}>
-          {getAlbumLabel(selectedAlbum)}
-        </Text>
-        {accessPrivileges === 'limited' && (
-          <View style={styles.accessRow}>
-            <Text style={styles.accessText}>Limited access</Text>
-            <Pressable onPress={handleManageAccess}>
-              <Text style={styles.accessLink}>Manage access</Text>
+      <View style={styles.content}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Choose album</Text>
+          {loading && <ActivityIndicator size="small" color={colors.accent} />}
+        </View>
+        <View style={styles.pickerContainer}>
+          <Text style={styles.selectedLabel}>
+            {getAlbumLabel(selectedAlbum)}
+          </Text>
+          {accessPrivileges === 'limited' && (
+            <View style={styles.accessRow}>
+              <Text style={styles.accessText}>Limited access</Text>
+              <Pressable onPress={handleManageAccess}>
+                <Text style={styles.accessLink}>Manage access</Text>
+              </Pressable>
+            </View>
+          )}
+          {albums.length > 0 ? (
+            <AlbumWheel
+              albums={albums}
+              selectedId={selectedId ?? albums[0]?.id ?? null}
+              onChange={setSelectedId}
+              getLabel={getAlbumLabel}
+            />
+          ) : (
+            <Text style={styles.emptyText}>No albums yet</Text>
+          )}
+        </View>
+
+        <View style={styles.createSection}>
+          {!showCreate && (
+            <Pressable onPress={() => setShowCreate(true)}>
+              <Text style={styles.createLink}>+ New album</Text>
             </Pressable>
-          </View>
-        )}
-        {albums.length > 0 ? (
-          <AlbumWheel
-            albums={albums}
-            selectedId={selectedId ?? albums[0]?.id ?? null}
-            onChange={setSelectedId}
-            getLabel={getAlbumLabel}
-          />
-        ) : (
-          <Text style={styles.emptyText}>No albums yet</Text>
-        )}
-      </View>
+          )}
+          {showCreate && (
+            <View style={styles.createRow}>
+              <TextInput
+                value={newAlbumName}
+                onChangeText={setNewAlbumName}
+                placeholder="Album name"
+                placeholderTextColor={colors.textMuted}
+                style={styles.input}
+                returnKeyType="done"
+                selectionColor={colors.accentSoft}
+                keyboardAppearance="dark"
+                onSubmitEditing={handleCreate}
+              />
+              <Button
+                label={creating ? 'Creating' : 'Create'}
+                onPress={handleCreate}
+                disabled={creating || newAlbumName.trim().length === 0}
+                style={styles.createButton}
+              />
+            </View>
+          )}
+        </View>
 
-      <View style={styles.createSection}>
-        {!showCreate && (
-          <Pressable onPress={() => setShowCreate(true)}>
-            <Text style={styles.createLink}>+ New album</Text>
-          </Pressable>
-        )}
-        {showCreate && (
-          <View style={styles.createRow}>
-            <TextInput
-              value={newAlbumName}
-              onChangeText={setNewAlbumName}
-              placeholder="Album name"
-              placeholderTextColor={colors.textMuted}
-              style={styles.input}
-              returnKeyType="done"
-              onSubmitEditing={handleCreate}
-            />
-            <Button
-              label={creating ? 'Creating' : 'Create'}
-              onPress={handleCreate}
-              disabled={creating || newAlbumName.trim().length === 0}
-              style={styles.createButton}
-            />
-          </View>
-        )}
-      </View>
-
-      <View style={styles.actions}>
-        <Button label="Cancel" onPress={onCancel} variant="ghost" />
-        <Button label="Save" onPress={handleConfirm} disabled={!selectedAlbum} style={styles.actionButton} />
+        <View style={styles.actions}>
+          <Button label="Cancel" onPress={onCancel} variant="ghost" />
+          <Button label="Save" onPress={handleConfirm} disabled={!selectedAlbum} style={styles.actionButton} />
+        </View>
       </View>
     </ModalSheet>
   );
 }
 
 const styles = StyleSheet.create({
+  content: {
+    paddingBottom: spacing.sm,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -38,6 +38,7 @@ type SessionStore = {
   loadMoreAssets: () => Promise<void>;
   markKept: (asset: Asset) => void;
   markDeleted: (asset: Asset) => void;
+  skipAsset: (asset: Asset) => void;
   undoDelete: () => void;
 };
 
@@ -190,6 +191,13 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     }));
   }, [deleteController]);
 
+  const skipAsset = useCallback((asset: Asset) => {
+    setState((prev) => ({
+      ...prev,
+      queue: prev.queue.filter((item) => item.id !== asset.id),
+    }));
+  }, []);
+
   const undoDelete = useCallback(() => {
     const restored = deleteController.undoDelete();
     if (!restored) return;
@@ -210,6 +218,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       loadMoreAssets,
       markKept,
       markDeleted,
+      skipAsset,
       undoDelete,
     }),
     [
@@ -221,6 +230,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       loadMoreAssets,
       markKept,
       markDeleted,
+      skipAsset,
       undoDelete,
     ]
   );

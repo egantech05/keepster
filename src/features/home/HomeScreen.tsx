@@ -14,7 +14,7 @@ export function HomeScreen({ onStart }: HomeScreenProps) {
     <View style={styles.container}>
       <View style={styles.hero}>
         <Text style={styles.title}>Keepster</Text>
-        <Text style={styles.subtitle}>A calm, focused way to clean your photos.</Text>
+        <Text style={styles.subtitle}>Keep your gallery clean.</Text>
       </View>
       <Button label="Start a cleaning session" onPress={onStart} />
     </View>

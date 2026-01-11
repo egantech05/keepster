@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, StyleSheet, View } from 'react-native';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 
@@ -12,9 +12,13 @@ type ModalSheetProps = {
 export function ModalSheet({ visible, onRequestClose, children }: ModalSheetProps) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onRequestClose}>
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        style={styles.overlay}
+      >
         <View style={styles.sheet}>{children}</View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
