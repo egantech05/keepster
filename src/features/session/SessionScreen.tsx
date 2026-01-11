@@ -82,15 +82,13 @@ export function SessionScreen() {
   }, [currentAsset, markKept, triggerHaptics]);
 
   const handleConfirmAlbum = useCallback(
-    async (album: Album | null, assetAlreadyAdded: boolean) => {
+    async (album: Album | null) => {
       setModalVisible(false);
       const asset = pendingKeepAsset;
       setPendingKeepAsset(null);
       if (!asset || !album) return;
       try {
-        if (!assetAlreadyAdded) {
-          await addAssetToAlbum(asset, album);
-        }
+        await addAssetToAlbum(asset, album);
         await recordAlbumUsage(album.id);
       } catch (error) {
         logger.warn('Album add failed', error);
@@ -157,7 +155,6 @@ export function SessionScreen() {
       </View>
       <AlbumPickerModal
         visible={modalVisible}
-        asset={pendingKeepAsset}
         onConfirm={handleConfirmAlbum}
         onCancel={handleCancelAlbum}
       />

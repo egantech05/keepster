@@ -1,4 +1,5 @@
 import type { Album, Asset } from 'expo-media-library';
+import { Platform } from 'react-native';
 import { mediaLibraryAdapter } from '../photos/mediaLibraryAdapter';
 import { markAssetInAlbum } from './albumMembershipService';
 import { getRecentAlbumIds, pinRecentAlbums, recordRecentAlbum } from './recentAlbumsStore';
@@ -11,9 +12,14 @@ export async function getOrderedAlbums(): Promise<Album[]> {
   return pinRecentAlbums(albums, recentIds);
 }
 
-export async function createAlbum(name: string, asset: Asset): Promise<Album> {
+export async function createAlbum(name: string, asset?: Asset): Promise<Album> {
+  if (!asset && Platform.OS !== 'ios') {
+    throw new Error('Creating empty albums is only supported on iOS.');
+  }
   const album = await mediaLibraryAdapter.createAlbum(name, asset);
-  markAssetInAlbum(asset.id);
+  if (asset) {
+    markAssetInAlbum(asset.id);
+  }
   return album;
 }
 

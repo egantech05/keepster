@@ -10,8 +10,11 @@ export const mediaLibraryAdapter = {
   getAlbums: (includeSmartAlbums = false): Promise<Album[]> => {
     return MediaLibrary.getAlbumsAsync({ includeSmartAlbums });
   },
-  createAlbum: (name: string, asset: Asset): Promise<Album> => {
-    return MediaLibrary.createAlbumAsync(name, asset, false);
+  createAlbum: (name: string, asset?: Asset): Promise<Album> => {
+    if (asset) {
+      return MediaLibrary.createAlbumAsync(name, asset);
+    }
+    return MediaLibrary.createAlbumAsync(name);
   },
   addAssetsToAlbum: (assets: Asset[], album: Album): Promise<void> => {
     return MediaLibrary.addAssetsToAlbumAsync(assets, album, false);

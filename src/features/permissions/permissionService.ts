@@ -9,6 +9,10 @@ export async function requestPhotoPermissions() {
   return MediaLibrary.requestPermissionsAsync();
 }
 
+export async function presentPhotoPermissionsPicker() {
+  return MediaLibrary.presentPermissionsPickerAsync(['photo']);
+}
+
 export async function openSettings() {
   await Linking.openSettings();
 }

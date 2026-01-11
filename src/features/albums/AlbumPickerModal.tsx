@@ -1,40 +1,53 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
-import type { Album, Asset } from 'expo-media-library';
+import type { Album } from 'expo-media-library';
+import * as MediaLibrary from 'expo-media-library';
 import { Button } from '../../components/Button';
 import { ModalSheet } from '../../components/ModalSheet';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
-import { createAlbum, getOrderedAlbums, recordAlbumUsage } from './albumService';
+import { createAlbum, getOrderedAlbums } from './albumService';
 import { logger } from '../../lib/logger';
+import { clearAlbumMembershipCache } from './albumMembershipService';
+import { AlbumWheel } from './AlbumWheel';
 
 type AlbumPickerModalProps = {
   visible: boolean;
-  asset: Asset | null;
-  onConfirm: (album: Album | null, assetAlreadyAdded: boolean) => void;
+  onConfirm: (album: Album | null) => void;
   onCancel: () => void;
 };
 
-export function AlbumPickerModal({ visible, asset, onConfirm, onCancel }: AlbumPickerModalProps) {
+export function AlbumPickerModal({ visible, onConfirm, onCancel }: AlbumPickerModalProps) {
   const [albums, setAlbums] = useState<Album[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [newAlbumName, setNewAlbumName] = useState('');
   const [creating, setCreating] = useState(false);
-  const [assetAlreadyAdded, setAssetAlreadyAdded] = useState(false);
+  const [accessPrivileges, setAccessPrivileges] = useState<
+    MediaLibrary.PermissionResponse['accessPrivileges']
+  >(undefined);
 
   const selectedAlbum = useMemo(
     () => albums.find((album) => album.id === selectedId) ?? null,
     [albums, selectedId]
   );
 
+  const getAlbumLabel = useCallback((album: Album | null) => {
+    if (!album) return 'Select an album';
+    const rawTitle = (album.title ?? '').trim();
+    if (rawTitle && rawTitle !== '?' && !/^[?\uFFFD]+$/.test(rawTitle)) {
+      return rawTitle;
+    }
+    return `Album ${album.id.slice(-4)}`;
+  }, []);
+
   const loadAlbums = useCallback(async () => {
     setLoading(true);
     try {
       const ordered = await getOrderedAlbums();
+      logger.info('Albums', ordered.map((album) => ({ id: album.id, title: album.title })));
       setAlbums(ordered);
       setSelectedId(ordered[0]?.id ?? null);
     } catch (error) {
@@ -44,17 +57,26 @@ export function AlbumPickerModal({ visible, asset, onConfirm, onCancel }: AlbumP
     }
   }, []);
 
+  const loadPermissions = useCallback(async () => {
+    try {
+      const status = await MediaLibrary.getPermissionsAsync();
+      setAccessPrivileges(status.accessPrivileges);
+    } catch (error) {
+      logger.warn('Permission load failed', error);
+    }
+  }, []);
+
   const handleCreate = useCallback(async () => {
     const trimmed = newAlbumName.trim();
-    if (!trimmed || !asset) return;
+    if (!trimmed) return;
     setCreating(true);
     try {
-      const album = await createAlbum(trimmed, asset);
-      await recordAlbumUsage(album.id);
-      const ordered = await getOrderedAlbums();
-      setAlbums(ordered);
+      const album = await createAlbum(trimmed);
+      setAlbums((prev) => {
+        const next = [album, ...prev.filter((item) => item.id !== album.id)];
+        return next;
+      });
       setSelectedId(album.id);
-      setAssetAlreadyAdded(true);
       setNewAlbumName('');
       setShowCreate(false);
     } catch (error) {
@@ -62,21 +84,31 @@ export function AlbumPickerModal({ visible, asset, onConfirm, onCancel }: AlbumP
     } finally {
       setCreating(false);
     }
-  }, [asset, newAlbumName]);
+  }, [newAlbumName]);
 
   const handleConfirm = useCallback(() => {
-    onConfirm(selectedAlbum, assetAlreadyAdded);
-    setAssetAlreadyAdded(false);
-  }, [assetAlreadyAdded, onConfirm, selectedAlbum]);
+    onConfirm(selectedAlbum);
+  }, [onConfirm, selectedAlbum]);
+
+  const handleManageAccess = useCallback(async () => {
+    try {
+      await MediaLibrary.presentPermissionsPickerAsync(['photo']);
+      clearAlbumMembershipCache();
+      await loadPermissions();
+      await loadAlbums();
+    } catch (error) {
+      logger.warn('Permission picker failed', error);
+    }
+  }, [loadAlbums, loadPermissions]);
 
   useEffect(() => {
     if (visible) {
       loadAlbums();
-      setAssetAlreadyAdded(false);
+      loadPermissions();
       setShowCreate(false);
       setNewAlbumName('');
     }
-  }, [loadAlbums, visible]);
+  }, [loadAlbums, loadPermissions, visible]);
 
   return (
     <ModalSheet visible={visible} onRequestClose={onCancel}>
@@ -85,16 +117,24 @@ export function AlbumPickerModal({ visible, asset, onConfirm, onCancel }: AlbumP
         {loading && <ActivityIndicator size="small" color={colors.accent} />}
       </View>
       <View style={styles.pickerContainer}>
+        <Text style={styles.selectedLabel}>
+          {getAlbumLabel(selectedAlbum)}
+        </Text>
+        {accessPrivileges === 'limited' && (
+          <View style={styles.accessRow}>
+            <Text style={styles.accessText}>Limited access</Text>
+            <Pressable onPress={handleManageAccess}>
+              <Text style={styles.accessLink}>Manage access</Text>
+            </Pressable>
+          </View>
+        )}
         {albums.length > 0 ? (
-          <Picker
-            selectedValue={selectedId}
-            onValueChange={(value: string) => setSelectedId(value)}
-            itemStyle={styles.pickerItem}
-          >
-            {albums.map((album) => (
-              <Picker.Item key={album.id} label={album.title} value={album.id} />
-            ))}
-          </Picker>
+          <AlbumWheel
+            albums={albums}
+            selectedId={selectedId ?? albums[0]?.id ?? null}
+            onChange={setSelectedId}
+            getLabel={getAlbumLabel}
+          />
         ) : (
           <Text style={styles.emptyText}>No albums yet</Text>
         )}
@@ -120,7 +160,7 @@ export function AlbumPickerModal({ visible, asset, onConfirm, onCancel }: AlbumP
             <Button
               label={creating ? 'Creating' : 'Create'}
               onPress={handleCreate}
-              disabled={creating || newAlbumName.trim().length === 0 || !asset}
+              disabled={creating || newAlbumName.trim().length === 0}
               style={styles.createButton}
             />
           </View>
@@ -152,11 +192,27 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: spacing.sm,
     marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.divider,
   },
-  pickerItem: {
-    fontFamily: typography.bodyFont,
-    color: colors.textPrimary,
-    fontSize: 16,
+  selectedLabel: {
+    textAlign: 'center',
+    fontSize: 15,
+    color: colors.textBright,
+    marginBottom: spacing.sm,
+  },
+  accessRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  accessText: {
+    color: colors.textMuted,
+    marginRight: spacing.sm,
+  },
+  accessLink: {
+    color: colors.accentSoft,
   },
   emptyText: {
     paddingVertical: spacing.lg,

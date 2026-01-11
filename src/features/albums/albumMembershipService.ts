@@ -56,3 +56,8 @@ export function markAssetInAlbum(assetId: string) {
   if (!membershipCache) return;
   membershipCache.add(assetId);
 }
+
+export function clearAlbumMembershipCache() {
+  membershipCache = null;
+  membershipPromise = null;
+}
